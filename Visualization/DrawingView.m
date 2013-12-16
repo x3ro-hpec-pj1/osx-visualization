@@ -16,11 +16,12 @@
 
 #import "DrawingView.h"
 
-static const NSInteger BUFFER_SIZE = 4096;
+static const NSInteger BUFFER_SIZE = 512;
 
 @implementation DrawingView {
     int sckt;
     long len, status;
+    int wtfcount;
     
     NSMutableString *currentFrame;
     
@@ -46,6 +47,7 @@ static const NSInteger BUFFER_SIZE = 4096;
         }
 
     currentFrame = [NSMutableString stringWithCapacity:0];
+    wtfcount = 0;
     
     [NSThread detachNewThreadSelector:@selector(redrawClock:) toTarget:self withObject:self];
     
@@ -59,27 +61,49 @@ static const NSInteger BUFFER_SIZE = 4096;
     }
 }
 
-- (NSString*)readFrame {
 
-    char buffer[BUFFER_SIZE];
+
+- (NSString*)readFrame {
+    
+    char packetBuffer[BUFFER_SIZE];
+    char packetLengthBuffer[4];
+    NSMutableString *frameBuffer = [NSMutableString stringWithCapacity:0];
+    
+    // Assume socket to be packet-aligned, that is the first
+    // three bytes will be the next packet length.
+    // End of frame is reached on a packet of length 1
+    
     
     while(TRUE) {
-        status = recv(sckt, buffer, BUFFER_SIZE, 0);
+
+        status = recv(sckt, packetLengthBuffer, 3, 0);
         if(status < 1) {
             perror("recv");
             exit(1);
         }
         
-        int endOfFrame = 0;
-        for(int i = 1; i < BUFFER_SIZE; i++) {
-            if(buffer[i-1] == '\n' && buffer[i] == '\n') {
-                endOfFrame = i;
-                break;
-            }
+        packetLengthBuffer[3] = '\0';
+        int packetLength = atoi(packetLengthBuffer);
+        
+        status = recv(sckt, packetBuffer, packetLength, 0);
+        if(status < 1) {
+            perror("recv");
+            exit(1);
         }
+        packetBuffer[packetLength] = '\0';
+        
+        // One-byte packet ends the frame
+        if(packetLength == 1) {
+            wtfcount++;
+            break;
+        }
+        
+        NSString *packet = [NSString stringWithCString:packetBuffer encoding:NSASCIIStringEncoding];
+        wtfcount++;
+        [frameBuffer appendFormat:@"%@,", packet];
     }
     
-    return NULL;
+    return [NSString stringWithString:frameBuffer];
 }
 
 - (void)drawRect:(NSRect)dirtyRect
@@ -88,33 +112,35 @@ static const NSInteger BUFFER_SIZE = 4096;
     
     
 
-    if(endOfFrame == 0) {
-        NSString *buf = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
-        [currentFrame appendString:buf];
-        
-//        NSLog(@"Could not find frame delimiter in data read from socket");
-//        exit(1);
-        
-    } else {
-        NSString *next = [NSString stringWithCString:(buffer + endOfFrame) encoding:NSASCIIStringEncoding];
-        [nextFrame appendString:next];
-        
-        buffer[endOfFrame+1] = '\0';
-        NSString *current = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
-        [currentFrame appendString:current];
-        
-        NSLog(@"full frame: \n %@", currentFrame);
-    }
+//    if(endOfFrame == 0) {
+//        NSString *buf = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
+//        [currentFrame appendString:buf];
+//        
+////        NSLog(@"Could not find frame delimiter in data read from socket");
+////        exit(1);
+//        
+//    } else {
+//        NSString *next = [NSString stringWithCString:(buffer + endOfFrame) encoding:NSASCIIStringEncoding];
+//        [nextFrame appendString:next];
+//        
+//        buffer[endOfFrame+1] = '\0';
+//        NSString *current = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
+//        [currentFrame appendString:current];
+//        
+//        NSLog(@"full frame: \n %@", currentFrame);
+//    }
+
     
     
     // draw here
-    NSString *current = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
+    NSString *current = [self readFrame];
+    NSLog(@"%@", current);
     
     
-    [currentFrame setString:@""];
-    NSMutableString *temp = currentFrame;
-    currentFrame = nextFrame;
-    nextFrame = temp;
+//    [currentFrame setString:@""];
+//    NSMutableString *temp = currentFrame;
+//    currentFrame = nextFrame;
+//    nextFrame = temp;
     
     
 
