@@ -21,7 +21,8 @@ static const NSInteger BUFFER_SIZE = 512;
 @implementation DrawingView {
     int sckt;
     long len, status;
-    int wtfcount;
+    
+    int frameCount;
     
     NSMutableString *currentFrame;
     
@@ -47,7 +48,7 @@ static const NSInteger BUFFER_SIZE = 512;
         }
 
     currentFrame = [NSMutableString stringWithCapacity:0];
-    wtfcount = 0;
+    frameCount = 0;
     
     [NSThread detachNewThreadSelector:@selector(redrawClock:) toTarget:self withObject:self];
     
@@ -72,8 +73,6 @@ static const NSInteger BUFFER_SIZE = 512;
     // Assume socket to be packet-aligned, that is the first
     // three bytes will be the next packet length.
     // End of frame is reached on a packet of length 1
-    
-    
     while(TRUE) {
 
         status = recv(sckt, packetLengthBuffer, 3, 0);
@@ -92,74 +91,50 @@ static const NSInteger BUFFER_SIZE = 512;
         }
         packetBuffer[packetLength] = '\0';
         
+        frameCount++;
+        
         // One-byte packet ends the frame
         if(packetLength == 1) {
-            wtfcount++;
             break;
         }
         
         NSString *packet = [NSString stringWithCString:packetBuffer encoding:NSASCIIStringEncoding];
-        wtfcount++;
         [frameBuffer appendFormat:@"%@,", packet];
     }
     
-    return [NSString stringWithString:frameBuffer];
+    return [NSString stringWithFormat:@"[ %@ {} ]", frameBuffer];
 }
 
 - (void)drawRect:(NSRect)dirtyRect
 {
-    
-    
-    
-
-//    if(endOfFrame == 0) {
-//        NSString *buf = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
-//        [currentFrame appendString:buf];
-//        
-////        NSLog(@"Could not find frame delimiter in data read from socket");
-////        exit(1);
-//        
-//    } else {
-//        NSString *next = [NSString stringWithCString:(buffer + endOfFrame) encoding:NSASCIIStringEncoding];
-//        [nextFrame appendString:next];
-//        
-//        buffer[endOfFrame+1] = '\0';
-//        NSString *current = [NSString stringWithCString:buffer encoding:NSASCIIStringEncoding];
-//        [currentFrame appendString:current];
-//        
-//        NSLog(@"full frame: \n %@", currentFrame);
-//    }
-
-    
-    
-    // draw here
     NSString *current = [self readFrame];
-    NSLog(@"%@", current);
-    
-    
-//    [currentFrame setString:@""];
-//    NSMutableString *temp = currentFrame;
-//    currentFrame = nextFrame;
-//    nextFrame = temp;
-    
-    
 
     
+    NSError *error = nil;
+    NSArray* object = [NSJSONSerialization
+                 JSONObjectWithData:[current dataUsingEncoding:NSUTF8StringEncoding]
+                 options:0
+                 error:&error];
+    
+    if(error) {
+        NSLog(@"Malformed JSON string");
+        exit(1);
+    }
+    
+    //[super drawRect:dirtyRect];
+    //[[NSColor clearColor] setFill];
+    //NSRectFill(dirtyRect);
+    
+    for(NSDictionary* dict in object) {
+        if(dict[@"x1"] == NULL) {
+            continue;
+        }
+        
+        NSPoint p1 = NSMakePoint([dict[@"x1"] floatValue], [dict[@"y1"] floatValue]);
+        NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue], [dict[@"y2"] floatValue]);
 
-    
-    [super drawRect:dirtyRect];
-    
-    NSPoint x1 = NSMakePoint(50.0, 50.0);
-    NSPoint x2 = NSMakePoint(1000.0, 1000.0);
-    [self drawLineFrom:x1 to:x2];
-    //[NSGraphicsContext restoreGraphicsState];
-	
-    // Drawing code here.
-//    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW,
-//                                            (int64_t)(0));
-//    dispatch_after(popTime, dispatch_get_main_queue(), ^(void) {
-//        [self setNeedsDisplay: YES];
-//    });
+        [self drawLineFrom:p1 to:p2];
+    }
 }
 
 - (void)drawLineFrom:(NSPoint)x1 to:(NSPoint)x2
