@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A068994A184F7117001F7C1F /* DrawingView.m in Sources */ = {isa = PBXBuildFile; fileRef = A0689949184F7117001F7C1F /* DrawingView.m */; };
+		A0C52BD318C8F326005C3431 /* CircularBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = A0C52BD218C8F326005C3431 /* CircularBuffer.m */; };
 		A0D5707F184F6F6C003E3EBB /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A0D5707E184F6F6C003E3EBB /* Cocoa.framework */; };
 		A0D57089184F6F6C003E3EBB /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A0D57087184F6F6C003E3EBB /* InfoPlist.strings */; };
 		A0D5708B184F6F6C003E3EBB /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A0D5708A184F6F6C003E3EBB /* main.m */; };
@@ -34,6 +35,8 @@
 /* Begin PBXFileReference section */
 		A0689948184F7117001F7C1F /* DrawingView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawingView.h; sourceTree = "<group>"; };
 		A0689949184F7117001F7C1F /* DrawingView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawingView.m; sourceTree = "<group>"; };
+		A0C52BD118C8F326005C3431 /* CircularBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CircularBuffer.h; sourceTree = "<group>"; };
+		A0C52BD218C8F326005C3431 /* CircularBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CircularBuffer.m; sourceTree = "<group>"; };
 		A0D5707B184F6F6C003E3EBB /* Visualization.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Visualization.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0D5707E184F6F6C003E3EBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		A0D57081184F6F6C003E3EBB /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -84,7 +87,9 @@
 				A0D5707D184F6F6C003E3EBB /* Frameworks */,
 				A0D5707C184F6F6C003E3EBB /* Products */,
 			);
+			indentWidth = 4;
 			sourceTree = "<group>";
+			tabWidth = 4;
 		};
 		A0D5707C184F6F6C003E3EBB /* Products */ = {
 			isa = PBXGroup;
@@ -118,6 +123,8 @@
 		A0D57084184F6F6C003E3EBB /* Visualization */ = {
 			isa = PBXGroup;
 			children = (
+				A0C52BD118C8F326005C3431 /* CircularBuffer.h */,
+				A0C52BD218C8F326005C3431 /* CircularBuffer.m */,
 				A0D57090184F6F6C003E3EBB /* AppDelegate.h */,
 				A0D57091184F6F6C003E3EBB /* AppDelegate.m */,
 				A0D57093184F6F6C003E3EBB /* MainMenu.xib */,
@@ -259,6 +266,7 @@
 			files = (
 				A0D57092184F6F6C003E3EBB /* AppDelegate.m in Sources */,
 				A0D5708B184F6F6C003E3EBB /* main.m in Sources */,
+				A0C52BD318C8F326005C3431 /* CircularBuffer.m in Sources */,
 				A068994A184F7117001F7C1F /* DrawingView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

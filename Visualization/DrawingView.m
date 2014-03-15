@@ -15,8 +15,9 @@
 #include <sys/un.h>
 
 #import "DrawingView.h"
+#import "CircularBuffer.h"
 
-static const NSInteger BUFFER_SIZE = 512;
+static const NSInteger BUFFER_SIZE = 65536;
 
 @implementation DrawingView {
     int sckt;
@@ -27,11 +28,16 @@ static const NSInteger BUFFER_SIZE = 512;
     NSMutableString *currentFrame;
     
     struct sockaddr_un remote;
+
+    CircularBuffer *buffer;
+
 }
 
 - (void)awakeFromNib
 {
-        sckt = socket(AF_UNIX, SOCK_STREAM, 0);
+    buffer = [CircularBuffer withCapacity:1000];
+
+       sckt = socket(AF_UNIX, SOCK_STREAM, 0);
         if(sckt == -1) {
             perror("socket()");
             exit(1);
@@ -51,7 +57,7 @@ static const NSInteger BUFFER_SIZE = 512;
     frameCount = 0;
     
     [NSThread detachNewThreadSelector:@selector(redrawClock:) toTarget:self withObject:self];
-    
+    [NSThread detachNewThreadSelector:@selector(receiveThread:) toTarget:self withObject:self];
 }
 
 -(void)redrawClock:(id)param{
@@ -62,78 +68,93 @@ static const NSInteger BUFFER_SIZE = 512;
     }
 }
 
+-(void)receiveThread:(id)param{
+    while(TRUE) {
+        [buffer enqueue:[self readFrame]];
+    }
+}
+
 
 
 - (NSString*)readFrame {
     
     char packetBuffer[BUFFER_SIZE];
-    char packetLengthBuffer[4];
-    NSMutableString *frameBuffer = [NSMutableString stringWithCapacity:0];
+    char packetLengthBuffer[6];
+    //NSMutableString *frameBuffer = [NSMutableString stringWithCapacity:0];
+    NSString *packet;
     
     // Assume socket to be packet-aligned, that is the first
     // three bytes will be the next packet length.
     // End of frame is reached on a packet of length 1
-    while(TRUE) {
-
-        status = recv(sckt, packetLengthBuffer, 3, 0);
+    //while(TRUE) {
+        status = recv(sckt, packetLengthBuffer, 5, 0);
         if(status < 1) {
-            perror("recv");
+            perror("recv1");
             exit(1);
         }
         
-        packetLengthBuffer[3] = '\0';
+        packetLengthBuffer[5] = '\0';
         int packetLength = atoi(packetLengthBuffer);
-        
-        status = recv(sckt, packetBuffer, packetLength, 0);
-        if(status < 1) {
-            perror("recv");
-            exit(1);
+        int bytesRead = 0;
+
+        while(bytesRead < packetLength) {
+            status = recv(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0);
+            bytesRead += status;
+            if(status < 1) {
+                perror("recv2");
+                exit(1);
+            }
         }
         packetBuffer[packetLength] = '\0';
-        
-        frameCount++;
-        
-        // One-byte packet ends the frame
-        if(packetLength == 1) {
-            break;
-        }
-        
-        NSString *packet = [NSString stringWithCString:packetBuffer encoding:NSASCIIStringEncoding];
-        [frameBuffer appendFormat:@"%@,", packet];
-    }
-    
-    return [NSString stringWithFormat:@"[ %@ {} ]", frameBuffer];
+
+        packet = [NSString stringWithCString:packetBuffer encoding:NSASCIIStringEncoding];
+        //[frameBuffer appendFormat:@"%@,", packet];
+        //[self processDrawCommand:packet];
+    //}
+
+    return packet;
+    //return [NSString stringWithFormat:@"[ %@ {} ]", frameBuffer];
 }
 
-- (void)drawRect:(NSRect)dirtyRect
-{
-    NSString *current = [self readFrame];
-
-    
+- (void)processDrawCommand:(NSString*)cmd {
     NSError *error = nil;
-    NSArray* object = [NSJSONSerialization
-                 JSONObjectWithData:[current dataUsingEncoding:NSUTF8StringEncoding]
-                 options:0
-                 error:&error];
-    
+    NSArray* array = [NSJSONSerialization
+                       JSONObjectWithData:[cmd dataUsingEncoding:NSUTF8StringEncoding]
+                       options:0
+                       error:&error];
+
     if(error) {
         NSLog(@"Malformed JSON string");
         exit(1);
     }
-    
-    //[super drawRect:dirtyRect];
-    //[[NSColor clearColor] setFill];
-    //NSRectFill(dirtyRect);
-    
-    for(NSDictionary* dict in object) {
-        if(dict[@"x1"] == NULL) {
-            continue;
-        }
-        
-        NSPoint p1 = NSMakePoint([dict[@"x1"] floatValue], [dict[@"y1"] floatValue]);
-        NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue], [dict[@"y2"] floatValue]);
 
-        [self drawLineFrom:p1 to:p2];
+    for(NSDictionary *dict in array) {
+        if([dict[@"type"] isEqual: @"line"]) {
+            NSPoint p1 = NSMakePoint([dict[@"x1"] floatValue], [dict[@"y1"] floatValue]);
+            NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue], [dict[@"y2"] floatValue]);
+            [self drawLineFrom:p1 to:p2];
+        } else if ([dict[@"type"] isEqual: @"text"]) {
+            [dict[@"text"] drawAtPoint:NSMakePoint([dict[@"x"] floatValue], [dict[@"y"] floatValue]) withAttributes:nil];
+        }
+    }
+}
+
+
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    [super drawRect:dirtyRect];
+
+    NSString *current;
+    int max_draws = 1;
+    while(max_draws > 0 && (current = [buffer dequeue]) != nil) {
+
+        [[NSColor whiteColor] set];
+        NSRectFill(dirtyRect);
+
+        [[NSColor blackColor] set];
+        [self processDrawCommand:current];
+        max_draws--;
     }
 }
 
