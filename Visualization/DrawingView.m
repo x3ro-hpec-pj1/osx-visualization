@@ -134,7 +134,15 @@ static const NSInteger BUFFER_SIZE = 65536;
             NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue], [dict[@"y2"] floatValue]);
             [self drawLineFrom:p1 to:p2];
         } else if ([dict[@"type"] isEqual: @"text"]) {
-            [dict[@"text"] drawAtPoint:NSMakePoint([dict[@"x"] floatValue], [dict[@"y"] floatValue]) withAttributes:nil];
+
+            NSMutableParagraphStyle *textStyle = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
+            NSFont *textFont = [NSFont systemFontOfSize:16];
+            NSDictionary *dictionary = @{ NSFontAttributeName: textFont,
+                                          NSParagraphStyleAttributeName: textStyle,
+                                          NSForegroundColorAttributeName: [NSColor redColor]};
+
+            [dict[@"text"] drawAtPoint:NSMakePoint([dict[@"x"] floatValue], [dict[@"y"] floatValue]) withAttributes:dictionary];
+            [[NSColor blackColor] set];
         }
     }
 }
