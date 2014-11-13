@@ -132,7 +132,18 @@ static const NSInteger BUFFER_SIZE = 65536;
         if([dict[@"type"] isEqual: @"line"]) {
             NSPoint p1 = NSMakePoint([dict[@"x1"] floatValue], [dict[@"y1"] floatValue]);
             NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue], [dict[@"y2"] floatValue]);
+
+            NSInteger color = [dict[@"color"] integerValue];
+
+            float r = ((color >> 24) & 0xFF) / 255.0;
+            float g = ((color >> 16) & 0xFF) / 255.0;
+            float b = ((color >> 8) & 0xFF) / 255.0;
+            float a = ((color) & 0xFF) / 255.0;
+
+            [[NSColor colorWithCalibratedRed:r green:g blue:b alpha:a] set];
+
             [self drawLineFrom:p1 to:p2];
+            [[NSColor blackColor] set];
         } else if ([dict[@"type"] isEqual: @"text"]) {
 
             NSMutableParagraphStyle *textStyle = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
