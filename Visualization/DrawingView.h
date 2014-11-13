@@ -8,7 +8,10 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface DrawingView : NSView
-
+@interface DrawingView : NSView {
+    int zoom;
+}
 
 @end
+
+

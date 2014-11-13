@@ -128,10 +128,22 @@ static const NSInteger BUFFER_SIZE = 65536;
         exit(1);
     }
 
+    int max_coordinate = 5600;
+    float ratio = self.frame.size.width / max_coordinate;
+    float half_height = self.frame.size.height / 2.0;
+    if(zoom > 0) {
+        ratio = ratio + (zoom/10.0);
+    } else {
+        zoom = 0;
+    }
+
+    NSLog(@"Zoom: %d", zoom);
+
+
     for(NSDictionary *dict in array) {
         if([dict[@"type"] isEqual: @"line"]) {
-            NSPoint p1 = NSMakePoint([dict[@"x1"] floatValue], [dict[@"y1"] floatValue]);
-            NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue], [dict[@"y2"] floatValue]);
+            NSPoint p1 = NSMakePoint([dict[@"x1"] floatValue] * ratio, [dict[@"y1"] floatValue] * ratio + half_height);
+            NSPoint p2 = NSMakePoint([dict[@"x2"] floatValue] * ratio, [dict[@"y2"] floatValue] * ratio + half_height);
 
             NSInteger color = [dict[@"color"] integerValue];
 
@@ -152,7 +164,7 @@ static const NSInteger BUFFER_SIZE = 65536;
                                           NSParagraphStyleAttributeName: textStyle,
                                           NSForegroundColorAttributeName: [NSColor redColor]};
 
-            [dict[@"text"] drawAtPoint:NSMakePoint([dict[@"x"] floatValue], [dict[@"y"] floatValue]) withAttributes:dictionary];
+            [dict[@"text"] drawAtPoint:NSMakePoint([dict[@"x"] floatValue] * ratio, [dict[@"y"] floatValue] * ratio + half_height) withAttributes:dictionary];
             [[NSColor blackColor] set];
         }
     }
@@ -175,6 +187,11 @@ static const NSInteger BUFFER_SIZE = 65536;
         [self processDrawCommand:current];
         max_draws--;
     }
+}
+
+- (void)scrollWheel:(NSEvent *)theEvent {
+//    NSLog(@"user scrolled %f horizontally and %f vertically", [theEvent deltaX], [theEvent deltaY]);
+    zoom += [theEvent deltaY];
 }
 
 - (void)drawLineFrom:(NSPoint)x1 to:(NSPoint)x2
