@@ -25,7 +25,7 @@ static const NSInteger BUFFER_SIZE = 65536;
     
     int frameCount;
     
-    NSMutableString *currentFrame;
+//    NSMutableString *currentFrame;
     
     struct sockaddr_un remote;
 
@@ -35,6 +35,7 @@ static const NSInteger BUFFER_SIZE = 65536;
 
 - (void)awakeFromNib
 {
+    stopped = NO;
     buffer = [CircularBuffer withCapacity:1000];
 
        sckt = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -77,7 +78,7 @@ static const NSInteger BUFFER_SIZE = 65536;
 
 
 - (NSString*)readFrame {
-    
+
     char packetBuffer[BUFFER_SIZE];
     char packetLengthBuffer[6];
     //NSMutableString *frameBuffer = [NSMutableString stringWithCapacity:0];
@@ -117,6 +118,8 @@ static const NSInteger BUFFER_SIZE = 65536;
 }
 
 - (void)processDrawCommand:(NSString*)cmd {
+
+
     NSError *error = nil;
     NSArray* array = [NSJSONSerialization
                        JSONObjectWithData:[cmd dataUsingEncoding:NSUTF8StringEncoding]
@@ -176,22 +179,30 @@ static const NSInteger BUFFER_SIZE = 65536;
 {
     [super drawRect:dirtyRect];
 
-    NSString *current;
     int max_draws = 1;
-    while(max_draws > 0 && (current = [buffer dequeue]) != nil) {
+    while(max_draws > 0) {
+        if(!stopped) {
+            currentFrame = [buffer dequeue];
+            if(currentFrame == nil) {
+                break;
+            }
+        }
 
         [[NSColor whiteColor] set];
         NSRectFill(dirtyRect);
 
         [[NSColor blackColor] set];
-        [self processDrawCommand:current];
+        [self processDrawCommand:currentFrame];
         max_draws--;
     }
 }
 
 - (void)scrollWheel:(NSEvent *)theEvent {
-//    NSLog(@"user scrolled %f horizontally and %f vertically", [theEvent deltaX], [theEvent deltaY]);
     zoom += [theEvent deltaY];
+}
+
+- (void)mouseUp:(NSEvent *)theEvent {
+    stopped = !stopped;
 }
 
 - (void)drawLineFrom:(NSPoint)x1 to:(NSPoint)x2

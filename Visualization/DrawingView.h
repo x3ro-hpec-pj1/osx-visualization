@@ -10,6 +10,8 @@
 
 @interface DrawingView : NSView {
     int zoom;
+    BOOL stopped;
+    NSString *currentFrame;
 }
 
 @end
