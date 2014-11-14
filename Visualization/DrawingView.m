@@ -140,8 +140,6 @@ static const NSInteger BUFFER_SIZE = 65536;
         zoom = 0;
     }
 
-    NSLog(@"Zoom: %d", zoom);
-
 
     for(NSDictionary *dict in array) {
         if([dict[@"type"] isEqual: @"line"]) {
