@@ -25,8 +25,10 @@ static const NSInteger BUFFER_SIZE = 65536;
 
 
 @implementation DrawingView {
-    int sckt;
+    int sckt, conn_desc;
     long len, status;
+
+    unsigned int size;
     
     int frameCount;
     
@@ -67,11 +69,14 @@ static const NSInteger BUFFER_SIZE = 65536;
 
 
     //create a UDP socket
-    if ((sckt=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    if ((sckt=socket(AF_INET,  SOCK_STREAM, 0)) == -1)
     {
         perror("socket()");
         exit(1);
     }
+
+    int optval = 1;
+    setsockopt(sckt, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
     // zero out the structure
     memset((char *) &si_me, 0, sizeof(si_me));
@@ -87,6 +92,17 @@ static const NSInteger BUFFER_SIZE = 65536;
         exit(1);
     }
 
+
+
+
+    listen(sckt, 1);
+    size = sizeof(si_other);
+
+    conn_desc = accept(sckt, (struct sockaddr *)&si_other, &size);
+    if (conn_desc == -1)
+        printf("Failed accepting connection\n");
+    else
+        printf("Connected\n");
 
     currentFrame = [NSMutableString stringWithCapacity:0];
     frameCount = 0;
@@ -135,10 +151,13 @@ static const NSInteger BUFFER_SIZE = 65536;
     // three bytes will be the next packet length.
     // End of frame is reached on a packet of length 1
 
-    if ((recv_len = recvfrom(sckt, packetLengthBuffer, 5, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-        perror("recvfrom()");
-        exit(1);
-    }
+//    if ((recv_len = recvfrom(sckt, packetLengthBuffer, 5, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+//        perror("recvfrom()");
+//        exit(1);
+//    }
+
+    recv_len = read(conn_desc, packetLengthBuffer, 5);
+
     NSLog(@"received: %d", recv_len);
         packetLengthBuffer[5] = '\0';
         int packetLength = atoi(packetLengthBuffer);
@@ -146,7 +165,8 @@ static const NSInteger BUFFER_SIZE = 65536;
 
         while(bytesRead < packetLength) {
 //            status = recv(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0);
-            if ((recv_len = recvfrom(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+            //if ((recv_len = recvfrom(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+            if ((recv_len = read(conn_desc, packetBuffer+bytesRead, packetLength-bytesRead)) == -1) {
                 perror("recvfrom()");
                 exit(1);
             }
