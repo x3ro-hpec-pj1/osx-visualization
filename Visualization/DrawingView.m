@@ -13,11 +13,16 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #import "DrawingView.h"
 #import "CircularBuffer.h"
 
+#define PORT 6871
+
 static const NSInteger BUFFER_SIZE = 65536;
+
 
 @implementation DrawingView {
     int sckt;
@@ -28,6 +33,8 @@ static const NSInteger BUFFER_SIZE = 65536;
 //    NSMutableString *currentFrame;
     
     struct sockaddr_un remote;
+    struct sockaddr_in si_me, si_other;
+    int slen;
 
     CircularBuffer *buffer;
 
@@ -38,21 +45,48 @@ static const NSInteger BUFFER_SIZE = 65536;
     stopped = NO;
     buffer = [CircularBuffer withCapacity:1000];
 
-       sckt = socket(AF_UNIX, SOCK_STREAM, 0);
-        if(sckt == -1) {
-            perror("socket()");
-            exit(1);
-        }
-        
-        remote.sun_family = AF_UNIX;
-        strcpy(remote.sun_path, "/Users/lucas/testsckt");
-        len = strlen(remote.sun_path) + 1 + sizeof(remote.sun_family);
-        
-        status = connect(sckt, (struct sockaddr *) &remote, (socklen_t) len);
-        if(status == -1) {
-            perror("connect()");
-            exit(1);
-        }
+//       sckt = socket(AF_UNIX, SOCK_STREAM, 0);
+//        if(sckt == -1) {
+//            perror("socket()");
+//            exit(1);
+//        }
+//        
+//        remote.sun_family = AF_UNIX;
+//        strcpy(remote.sun_path, "/Users/lucas/testsckt");
+//        len = strlen(remote.sun_path) + 1 + sizeof(remote.sun_family);
+//        
+//        status = connect(sckt, (struct sockaddr *) &remote, (socklen_t) len);
+//        if(status == -1) {
+//            perror("connect()");
+//            exit(1);
+//        }
+
+    slen = sizeof(si_other);
+
+
+
+
+    //create a UDP socket
+    if ((sckt=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    {
+        perror("socket()");
+        exit(1);
+    }
+
+    // zero out the structure
+    memset((char *) &si_me, 0, sizeof(si_me));
+
+    si_me.sin_family = AF_INET;
+    si_me.sin_port = htons(PORT);
+    si_me.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    //bind socket to port
+    if( bind(sckt, (struct sockaddr*)&si_me, sizeof(si_me) ) == -1)
+    {
+        perror("bind()");
+        exit(1);
+    }
+
 
     currentFrame = [NSMutableString stringWithCapacity:0];
     frameCount = 0;
@@ -83,28 +117,45 @@ static const NSInteger BUFFER_SIZE = 65536;
     char packetLengthBuffer[6];
     //NSMutableString *frameBuffer = [NSMutableString stringWithCapacity:0];
     NSString *packet;
+
+    int recv_len;
     
     // Assume socket to be packet-aligned, that is the first
     // three bytes will be the next packet length.
     // End of frame is reached on a packet of length 1
     //while(TRUE) {
-        status = recv(sckt, packetLengthBuffer, 5, 0);
-        if(status < 1) {
-            perror("recv1");
-            exit(1);
-        }
-        
+//        status = recv(sckt, packetLengthBuffer, 5, 0);
+//        if(status < 1) {
+//            perror("recv1");
+//            exit(1);
+//        }
+//
+
+    // Assume socket to be packet-aligned, that is the first
+    // three bytes will be the next packet length.
+    // End of frame is reached on a packet of length 1
+
+    if ((recv_len = recvfrom(sckt, packetLengthBuffer, 5, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+        perror("recvfrom()");
+        exit(1);
+    }
+    NSLog(@"received: %d", recv_len);
         packetLengthBuffer[5] = '\0';
         int packetLength = atoi(packetLengthBuffer);
         int bytesRead = 0;
 
         while(bytesRead < packetLength) {
-            status = recv(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0);
-            bytesRead += status;
-            if(status < 1) {
-                perror("recv2");
+//            status = recv(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0);
+            if ((recv_len = recvfrom(sckt, packetBuffer+bytesRead, packetLength-bytesRead, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+                perror("recvfrom()");
                 exit(1);
             }
+            bytesRead += recv_len;
+            NSLog(@"Bytesread: %d", bytesRead);
+//            if(status < 1) {
+//                perror("recv2");
+//                exit(1);
+//            }
         }
         packetBuffer[packetLength] = '\0';
 
