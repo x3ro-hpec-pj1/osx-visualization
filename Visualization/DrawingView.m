@@ -21,7 +21,7 @@
 
 #define PORT 6871
 
-static const NSInteger BUFFER_SIZE = 65536;
+static const NSInteger BUFFER_SIZE = 165536;
 
 
 @implementation DrawingView {
